@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/herabel/pulse-sync/pkg/cdc"
-	"lukechampine.com/blake3"
+	"github.com/zeebo/blake3"
 )
 
 func TestCutPosition(t *testing.T) {
@@ -106,4 +106,67 @@ func BenchmarkFastCDC_Pipeline(b *testing.B) {
 			_ = chunk.Hash
 		}
 	}
+}
+
+func TestChunkDistribution(t *testing.T) {
+	// 50 mb synthetic random payload
+	totalSize := 500 * 1024 * 1024
+	data := make([]byte, totalSize)
+	rand.Read(data)
+
+	reader := bytes.NewReader(data)
+	chunksChan := cdc.Chunking(reader)
+
+	var count int
+	minSize := int(^uint(0) >> 1)
+	maxSize := 0
+
+	// distribution buckets
+	b2k_4k := 0
+	b4k_8k := 0
+	b8k_16k := 0
+	b16k_32k := 0
+	b32k_64k := 0
+	forcedCuts := 0
+
+	for chunk := range chunksChan {
+		count++
+		sz := int(chunk.Length)
+
+		if sz < minSize {
+			minSize = sz
+		}
+		if sz > maxSize {
+			maxSize = sz
+		}
+
+		switch {
+		case sz == cdc.MaxChunkSize:
+			forcedCuts++
+		case sz < 4*1024:
+			b2k_4k++
+		case sz < 8*1024:
+			b4k_8k++
+		case sz < 16*1024:
+			b8k_16k++
+		case sz < 32*1024:
+			b16k_32k++
+		default:
+			b32k_64k++
+		}
+	}
+
+	avgSize := totalSize / count
+
+	t.Logf("=== FASTCDC DISTRIBUTION ===")
+	t.Logf("Total chunks : %d", count)
+	t.Logf("Average size : %d bytes (%.2f KB)", avgSize, float64(avgSize)/1024.0)
+	t.Logf("Min / Max    : %d / %d bytes", minSize, maxSize)
+	t.Logf("--- BUCKETS ---")
+	t.Logf("  2 KB -  4 KB : %5d (%.3f%%)", b2k_4k, float64(b2k_4k)*100/float64(count))
+	t.Logf("  4 KB -  8 KB : %5d (%.3f%%)", b4k_8k, float64(b4k_8k)*100/float64(count))
+	t.Logf("  8 KB - 16 KB : %5d (%.3f%%)", b8k_16k, float64(b8k_16k)*100/float64(count))
+	t.Logf(" 16 KB - 32 KB : %5d (%.3f%%)", b16k_32k, float64(b16k_32k)*100/float64(count))
+	t.Logf(" 32 KB - 64 KB : %5d (%.3f%%)", b32k_64k, float64(b32k_64k)*100/float64(count))
+	t.Logf(" Forced (64 KB): %5d (%.3f%%)", forcedCuts, float64(forcedCuts)*100/float64(count))
 }
