@@ -3,7 +3,7 @@ package cdc
 import (
 	"io"
 
-	"lukechampine.com/blake3"
+	"github.com/zeebo/blake3"
 )
 
 const (
@@ -80,8 +80,12 @@ func HashChunk(in <-chan Chunk) <-chan Chunk {
 
 	go func() {
 		defer close(out)
+
+		Hasher := blake3.New()
 		for chunk := range in {
-			chunk.Hash = blake3.Sum256(chunk.Data)
+			Hasher.Reset()
+			Hasher.Write(chunk.Data)
+			Hasher.Sum(chunk.Hash[:0])
 			out <- chunk
 		}
 	}()
