@@ -16,7 +16,7 @@ func TestCutPosition(t *testing.T) {
 	data := make([]byte, 100*1024)
 	rand.Read(data)
 
-	cut := cdc.СutPosition(data)
+	cut := cdc.CutPosition(data)
 
 	t.Logf("Found chunk of size: %d bytes", cut)
 
