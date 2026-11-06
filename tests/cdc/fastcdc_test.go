@@ -194,6 +194,32 @@ func TestChunkDistribution(t *testing.T) {
 	t.Logf(" Forced (64 KB): %5d (%.3f%%)", forcedCuts, float64(forcedCuts)*100/float64(count))
 }
 
+func BenchmarkCutPosition_Raw(b *testing.B) {
+	data := make([]byte, 64*1024)
+	rand.Read(data)
+
+	b.SetBytes(int64(len(data)))
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_ = cdc.CutPosition(data)
+	}
+}
+
+func BenchmarkCutPosition_Parallel(b *testing.B) {
+	data := make([]byte, 64*1024)
+	rand.Read(data)
+
+	b.SetBytes(int64(len(data)))
+	b.ResetTimer()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = cdc.CutPosition(data)
+		}
+	})
+}
+
 //////////
 // Large file tests
 //////////
