@@ -22,7 +22,7 @@ const (
 	MaskB = 0x03FF
 )
 
-func СutPosition(data []byte) int {
+func CutPosition(data []byte) int {
 	if len(data) < MinChunkSize {
 		return len(data)
 	}
@@ -57,7 +57,7 @@ func Chunking(reader io.Reader) <-chan Chunk {
 		lastCut := 0
 
 		for {
-			cut := СutPosition(buf[lastCut:n])
+			cut := CutPosition(buf[lastCut:n])
 			chunkBytes := make([]byte, cut)
 			copy(chunkBytes, buf[lastCut:lastCut+cut])
 			ch <- Chunk{
