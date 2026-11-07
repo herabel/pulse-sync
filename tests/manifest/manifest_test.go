@@ -24,7 +24,7 @@ func TestBuild(t *testing.T) {
 	manifest, err := manifest.Build(filePath)
 
 	if err != nil {
-		t.Fatalf("Error while building manifest: %d", err)
+		t.Fatalf("Error while building manifest: %v", err)
 	}
 
 	if manifest.Size == int64(len(data)) {
