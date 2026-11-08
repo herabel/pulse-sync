@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"crypto/rand"
+	"encoding/binary"
 	"os"
 	"path/filepath"
 	"testing"
@@ -134,5 +135,55 @@ func TestCompare_Delta(t *testing.T) {
 	}
 	if result[0].Hash != hashD {
 		t.Fatalf("Expected missing chunk to be hashD, got %v", result[0].Hash)
+	}
+}
+
+func BenchmarkCompare(b *testing.B) {
+	numChunks := 1000
+	chunksA := make([]manifest.ChunkDesc, numChunks)
+	for i := 0; i < numChunks; i++ {
+		var h [32]byte
+		binary.BigEndian.PutUint64(h[0:8], uint64(i))
+
+		chunksA[i] = manifest.ChunkDesc{
+			Offset: uint64(i * 8192),
+			Length: 8192,
+			Hash:   h,
+		}
+	}
+
+	chunksB := make([]manifest.ChunkDesc, numChunks)
+	copy(chunksB, chunksA)
+
+	chunksB[numChunks-1].Hash = [32]byte{0xFF}
+
+	m1 := &manifest.Manifest{Size: 1000 * 8192, ModTime: 1, Chunks: chunksA}
+	m2 := &manifest.Manifest{Size: 1000 * 8192, ModTime: 2, Chunks: chunksB}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = manifest.Compare(m1, m2)
+	}
+}
+
+func BenchmarkCompare_Identical(b *testing.B) {
+	numChunks := 1000
+	chunksA := make([]manifest.ChunkDesc, numChunks)
+	for i := 0; i < numChunks; i++ {
+		var h [32]byte
+		binary.BigEndian.PutUint64(h[0:8], uint64(i))
+
+		chunksA[i] = manifest.ChunkDesc{
+			Offset: uint64(i * 8192),
+			Length: 8192,
+			Hash:   h,
+		}
+	}
+
+	m1 := &manifest.Manifest{Size: 1000 * 8192, ModTime: 1, Chunks: chunksA}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = manifest.Compare(m1, m1)
 	}
 }
