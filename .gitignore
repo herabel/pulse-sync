@@ -1,0 +1,9 @@
+# Binaries
+*.exe
+/pulse-sync
+/pulse-sync-linux
+
+# Temporary files
+*.pulsetmp
+*.bin
+tmp/
