@@ -133,6 +133,13 @@ GOOS=linux GOARCH=amd64 go build -o pulse-sync-linux ./cmd/pulse-sync
 
 ---
 
+## References
+
+- **FastCDC Paper:** Wen Xia, Yukun Zhou, Hong Jiang, Dan Feng, Yu Hua, Yuchong Hu, Qing Liu, Yucheng Zhang. *[FastCDC: a Fast and Efficient Content-Defined Chunking Approach for Data Deduplication](https://www.usenix.org/conference/atc16/technical-sessions/presentation/xia)*. 2016 USENIX Annual Technical Conference (USENIX ATC '16), Denver, CO, pp. 101–114.
+- **BLAKE3 Specification:** Jack O'Connor, Jean-Philippe Aumasson, Samuel Neves, Zooko Wilcox-O'Hearn. *[BLAKE3: one function, fast everywhere](https://github.com/BLAKE3-team/BLAKE3-specs/blob/master/blake3.pdf)*.
+
+---
+
 ## License
 
 MIT
