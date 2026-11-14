@@ -57,8 +57,17 @@ func Build(Path string) (*Manifest, error) {
 }
 
 func Compare(oldManifest *Manifest, newManifest *Manifest) []ChunkDesc {
-	if oldManifest.ModTime == newManifest.ModTime && oldManifest.Size == newManifest.Size {
-		return nil
+	if len(oldManifest.Chunks) == len(newManifest.Chunks) {
+		identical := true
+		for i := range oldManifest.Chunks {
+			if oldManifest.Chunks[i].Hash != newManifest.Chunks[i].Hash {
+				identical = false
+				break
+			}
+		}
+		if identical {
+			return nil
+		}
 	}
 
 	var missing []ChunkDesc

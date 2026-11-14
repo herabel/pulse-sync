@@ -187,3 +187,99 @@ func BenchmarkCompare_Identical(b *testing.B) {
 		_ = manifest.Compare(m1, m1)
 	}
 }
+
+func TestManifestCodec_Roundtrip(t *testing.T) {
+	orig := &manifest.Manifest{
+		Path:    "project/data/blob.bin",
+		Size:    1048576,
+		ModTime: 1731448800,
+		Chunks: []manifest.ChunkDesc{
+			{Offset: 0, Length: 8192, Hash: [32]byte{0xAA, 0xBB, 0xCC}},
+			{Offset: 8192, Length: 4096, Hash: [32]byte{0x11, 0x22, 0x33}},
+		},
+	}
+
+	encoded := manifest.EncodeManifest(orig)
+	decoded, err := manifest.DecodeManifest(encoded)
+	if err != nil {
+		t.Fatalf("DecodeManifest failed: %v", err)
+	}
+
+	if decoded.Path != orig.Path {
+		t.Fatalf("Path mismatch: got %q, want %q", decoded.Path, orig.Path)
+	}
+	if decoded.Size != orig.Size || decoded.ModTime != orig.ModTime {
+		t.Fatalf("Metadata mismatch: size %d vs %d, modTime %d vs %d",
+			decoded.Size, orig.Size, decoded.ModTime, orig.ModTime)
+	}
+	if len(decoded.Chunks) != len(orig.Chunks) {
+		t.Fatalf("Chunks count mismatch: got %d, want %d", len(decoded.Chunks), len(orig.Chunks))
+	}
+	for i := range orig.Chunks {
+		if decoded.Chunks[i] != orig.Chunks[i] {
+			t.Fatalf("Chunk[%d] mismatch: got %+v, want %+v", i, decoded.Chunks[i], orig.Chunks[i])
+		}
+	}
+}
+
+func TestDecodeManifest_Corrupted(t *testing.T) {
+	tests := []struct {
+		name string
+		data []byte
+	}{
+		{
+			name: "too short (< 22 bytes)",
+			data: []byte{0x00, 0x05, 0x01},
+		},
+		{
+			name: "zero path len",
+			data: func() []byte {
+				buf := make([]byte, 30)
+				binary.BigEndian.PutUint16(buf[0:2], 0) // pathLen = 0
+				return buf
+			}(),
+		},
+		{
+			name: "path length exceeds buffer",
+			data: func() []byte {
+				buf := make([]byte, 25)
+				binary.BigEndian.PutUint16(buf[0:2], 100) // pathLen = 100, but buffer has only 25 bytes
+				return buf
+			}(),
+		},
+		{
+			name: "chunkCount OOM bomb",
+			data: func() []byte {
+				m := &manifest.Manifest{Path: "test.bin", Size: 100, ModTime: 100}
+				buf := manifest.EncodeManifest(m)
+				// spoofing chunkCount to 10 millions in valid manifest
+				offset := 2 + len("test.bin") + 8 + 8
+				binary.BigEndian.PutUint32(buf[offset:offset+4], 10_000_000)
+				return buf
+			}(),
+		},
+		{
+			name: "truncated chunk list",
+			data: func() []byte {
+				m := &manifest.Manifest{
+					Path: "test.bin",
+					Chunks: []manifest.ChunkDesc{
+						{Offset: 0, Length: 100},
+						{Offset: 100, Length: 200},
+					},
+				}
+				buf := manifest.EncodeManifest(m)
+				return buf[:len(buf)-10] // truncate last 10 bytes of chunks
+			}(),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := manifest.DecodeManifest(tc.data)
+			if err == nil {
+				t.Fatalf("expected error on %q, but got nil (panic or undetected corruption)", tc.name)
+			}
+		})
+	}
+}

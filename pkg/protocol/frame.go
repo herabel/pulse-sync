@@ -21,6 +21,12 @@ ok      github.com/herabel/pulse-sync/tests/protocol    1.674s
 */
 
 func WriteFrame(w io.Writer, h Header, payload []byte) error {
+	if h.Magic == 0 {
+		h.Magic = Magic
+	}
+	if h.Version == 0 {
+		h.Version = 1
+	}
 	h.PayloadLen = uint32(len(payload))
 
 	headerBytes := EncodeHeader(h)

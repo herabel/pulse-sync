@@ -58,6 +58,8 @@ func BenchmarkEndToEnd_Pipeline(b *testing.B) {
 			Chunks:  newChunks,
 		}
 
+		_ = manifest.EncodeManifest(mNew)
+
 		missing := manifest.Compare(mOld, mNew)
 
 		h := protocol.Header{
@@ -118,6 +120,7 @@ func BenchmarkEndToEndParallel_Pipeline(b *testing.B) {
 				ModTime: int64(2000 + iter),
 				Chunks:  newChunks,
 			}
+			_ = manifest.EncodeManifest(mNew)
 			missing := manifest.Compare(mOld, mNew)
 			h := protocol.Header{
 				Magic:      protocol.Magic,
